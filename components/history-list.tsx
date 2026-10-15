@@ -96,15 +96,15 @@ export function HistoryList({
                 <h3 className="history-title">{item.komikTitle}</h3>
                 <p className="history-chapter">
                   {item.chapterTitle}
-                  {item.totalChapters > 0 && (
+                  {(item.totalChapters ?? 0) > 0 && (
                     <span className="history-progress">
                       {' '}
-                      · {item.totalChapters ?? 0} chapter
+                      · {item.totalChapters} chapter
                     </span>
                   )}
                 </p>
                 <p className="history-time">
-                 formatRelativeTime(item.updatedAt)
+                  {formatRelativeTime(item.updatedAt)}
                 </p>
               </div>
 
