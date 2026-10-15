@@ -99,12 +99,12 @@ export function HistoryList({
                   {item.totalChapters > 0 && (
                     <span className="history-progress">
                       {' '}
-                      · {item.totalChapters} chapter
+                      · {item.totalChapters ?? 0} chapter
                     </span>
                   )}
                 </p>
                 <p className="history-time">
-                  {formatRelativeTime(item.timestamp)}
+                 formatRelativeTime(item.updatedAt)
                 </p>
               </div>
 
