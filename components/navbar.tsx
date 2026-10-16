@@ -6,10 +6,10 @@ import { Suspense, useState, useEffect, type FormEvent } from 'react';
 import { ThemeToggle } from './theme-toggle';
 
 const NAV_LINKS = [
-  { href: '/jelajah', label: 'Jelajah' },
   { href: '/latest', label: 'Baru masuk' },
   { href: '/popular', label: 'Sering dibaca' },
   { href: '/genre', label: 'Genre' },
+  { href: '/riwayat', label: 'Riwayat' },
 ];
 
 const TYPE_LINKS = [

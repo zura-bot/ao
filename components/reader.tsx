@@ -1,10 +1,10 @@
 'use client';
 
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { useEffect, useRef, useState } from 'react';
 import type { ChapterResult } from '@/types/komiku';
-import { saveHistory } from '@/lib/history';
+import { saveHistory, updateScrollPercent } from '@/lib/history';
 
 interface ReaderProps {
   chapter: ChapterResult;
@@ -12,28 +12,32 @@ interface ReaderProps {
 
 export function Reader({ chapter }: ReaderProps) {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [progress, setProgress] = useState(0);
   const [showBar, setShowBar] = useState(true);
 
+  const komikSlugRef = useRef<string | null>(null);
+  const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const resumedRef = useRef(false);
+
   // ============================================================
-  // AUTO-SAVE RIWAYAT BACA
+  // AUTO-SAVE RIWAYAT BACA (saat buka chapter)
   // ============================================================
   useEffect(() => {
     if (!chapter.manga_url) return;
 
-    // Extract slug komik dari manga_url
     const komikSlug = chapter.manga_url
       .replace(/^https?:\/\/[^/]+\//, '')
       .replace(/^\/?/, '')
       .replace(/\/$/, '');
 
     if (!komikSlug) return;
+    komikSlugRef.current = komikSlug;
 
     let cancelled = false;
 
     (async () => {
       try {
-        // Fetch detail komik buat cover + total chapter
         const res = await fetch(
           `/api/detail/${encodeURIComponent(komikSlug)}`
         );
@@ -41,8 +45,6 @@ export function Reader({ chapter }: ReaderProps) {
         if (cancelled) return;
 
         const detail = data?.data;
-
-        // Fallback: judul dari chapter title (strip "Chapter X")
         const fallbackTitle = chapter.title
           .replace(/\s*[-–]?\s*Chapter\s*\d+.*$/i, '')
           .trim();
@@ -56,7 +58,6 @@ export function Reader({ chapter }: ReaderProps) {
           totalChapters: detail?.total_chapters || 0,
         });
       } catch {
-        // Kalau fetch gagal, save fallback tanpa cover
         if (cancelled) return;
         saveHistory({
           komikSlug,
@@ -77,7 +78,39 @@ export function Reader({ chapter }: ReaderProps) {
   }, [chapter.slug, chapter.manga_url, chapter.title]);
 
   // ============================================================
-  // SCROLL PROGRESS + AUTO-HIDE NAVBAR
+  // AUTO-RESUME SCROLL (dari ?resume=1)
+  // ============================================================
+  useEffect(() => {
+    if (resumedRef.current) return;
+    if (searchParams.get('resume') !== '1') return;
+    if (!komikSlugRef.current) return;
+
+    const komikSlug = komikSlugRef.current;
+    resumedRef.current = true;
+
+    // Tunggu gambar ke-render dulu, baru scroll
+    const timer = setTimeout(() => {
+      const raw = window.localStorage.getItem('kuroneko:history');
+      if (!raw) return;
+      try {
+        const items = JSON.parse(raw) as Array<{
+          komikSlug: string;
+          scrollPercent: number;
+        }>;
+        const item = items.find((h) => h.komikSlug === komikSlug);
+        if (!item || !item.scrollPercent || item.scrollPercent < 5) return;
+
+        const docHeight = document.documentElement.scrollHeight;
+        const target = (docHeight * item.scrollPercent) / 100;
+        window.scrollTo({ top: target, behavior: 'auto' });
+      } catch {}
+    }, 600);
+
+    return () => clearTimeout(timer);
+  }, [searchParams]);
+
+  // ============================================================
+  // SCROLL PROGRESS + AUTO-SAVE POSISI
   // ============================================================
   useEffect(() => {
     const onScroll = () => {
@@ -85,14 +118,28 @@ export function Reader({ chapter }: ReaderProps) {
       const docHeight =
         document.documentElement.scrollHeight - window.innerHeight;
       const p = docHeight > 0 ? (scrollTop / docHeight) * 100 : 0;
-      setProgress(Math.min(100, Math.max(0, p)));
+      const percent = Math.min(100, Math.max(0, p));
+      setProgress(percent);
 
       if (scrollTop > 200) setShowBar(false);
       else setShowBar(true);
+
+      // Debounced save scroll position (1.5 detik)
+      if (komikSlugRef.current) {
+        if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
+        saveTimeoutRef.current = setTimeout(() => {
+          if (komikSlugRef.current) {
+            updateScrollPercent(komikSlugRef.current, Math.round(percent));
+          }
+        }, 1500);
+      }
     };
     window.addEventListener('scroll', onScroll, { passive: true });
     onScroll();
-    return () => window.removeEventListener('scroll', onScroll);
+    return () => {
+      window.removeEventListener('scroll', onScroll);
+      if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
+    };
   }, []);
 
   // ============================================================
@@ -235,17 +282,7 @@ export function Reader({ chapter }: ReaderProps) {
 
 function BackIcon() {
   return (
-    <svg
-      width="18"
-      height="18"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.75"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-    >
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
       <path d="M19 12H5M12 19l-7-7 7-7" />
     </svg>
   );
@@ -253,17 +290,7 @@ function BackIcon() {
 
 function ChevronLeft() {
   return (
-    <svg
-      width="20"
-      height="20"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-    >
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
       <path d="m15 18-6-6 6-6" />
     </svg>
   );
@@ -271,17 +298,7 @@ function ChevronLeft() {
 
 function ChevronRight() {
   return (
-    <svg
-      width="20"
-      height="20"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-    >
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
       <path d="m9 18 6-6-6-6" />
     </svg>
   );

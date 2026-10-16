@@ -1,5 +1,6 @@
 import type { MetadataRoute } from 'next';
-import { getHome, getByGenre, GENRES } from '@/lib/komiku';
+import { getHome, GENRES } from '@/lib/komiku';
+import type { ComicCard } from '@/types/komiku';
 
 const siteUrl =
   process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
@@ -17,12 +18,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       changeFrequency: 'daily',
       priority: 1.0,
     },
-    {
-      url: `${siteUrl}/jelajah`,
-      lastModified: now,
-      changeFrequency: 'daily',
-      priority: 0.9,
-    },
+    // /jelajah udah redirect ke / — jadi nggak masuk sitemap
     {
       url: `${siteUrl}/latest`,
       lastModified: now,
@@ -72,7 +68,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   }));
 
   // ============================================================
-  // 3. Comic detail pages (dari halaman home + page 1 tiap type)
+  // 3. Comic detail pages (dari halaman home)
   // ============================================================
   let comicPages: MetadataRoute.Sitemap = [];
 
@@ -82,13 +78,13 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
     // Dedupe by slug
     const seen = new Set<string>();
-    const uniqueComics = comics.filter((c) => {
+    const uniqueComics = comics.filter((c: ComicCard) => {
       if (!c.slug || seen.has(c.slug)) return false;
       seen.add(c.slug);
       return true;
     });
 
-    comicPages = uniqueComics.map((comic) => ({
+    comicPages = uniqueComics.map((comic: ComicCard) => ({
       url: `${siteUrl}/komik/${comic.slug}`,
       lastModified: now,
       changeFrequency: 'weekly',

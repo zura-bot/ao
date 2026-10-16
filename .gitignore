@@ -64,3 +64,6 @@ yarn-error.log*
 # OS
 .DS_Store
 Thumbs.db
+*.bak
+*.bak.*
+lib/sources/*.bak
