@@ -22,14 +22,23 @@ const inter = Inter({
 const siteUrl =
   process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
 
+const siteTitle = 'Kuroneko — Komik Online Bahasa Indonesia';
+
+// Meta description (pas 160 karakter buat Google)
+const siteDescription =
+  'Kuroneko adalah situs baca komik online (manga, manhwa, manhua) berbahasa Indonesia. Dibuat oleh Fahmi Coenubia, praktis dan gratis.';
+
+// OG/Twitter description (bisa lebih panjang buat share preview)
+const siteDescriptionLong =
+  'Kuroneko adalah situs baca komik online (manga, manhwa, manhua) berbahasa Indonesia. Dikembangkan oleh Fahmi Coenubia untuk pengalaman membaca yang praktis.';
+
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
   title: {
-    default: 'Kuroneko — Komik Online Bahasa Indonesia',
+    default: siteTitle,
     template: '%s · Kuroneko',
   },
-  description:
-    'Baca manga, manhwa, dan manhua bahasa Indonesia. Update tiap hari, gratis.',
+  description: siteDescription,
   keywords: [
     'komik online',
     'baca komik',
@@ -42,18 +51,13 @@ export const metadata: Metadata = {
   ],
   authors: [{ name: 'Fahmi Coenubia' }],
   creator: 'Fahmi Coenubia',
-  icons: {
-    icon: '/kuroneko-logo.png',
-    apple: '/kuroneko-logo.png',
-  },
   openGraph: {
     type: 'website',
     locale: 'id_ID',
     url: siteUrl,
     siteName: 'Kuroneko',
-    title: 'Kuroneko — Komik Online Bahasa Indonesia',
-    description:
-      'Baca manga, manhwa, dan manhua bahasa Indonesia. Update tiap hari, gratis.',
+    title: siteTitle,
+    description: siteDescriptionLong,
     images: [
       {
         url: '/kuroneko-logo.png',
@@ -65,9 +69,8 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Kuroneko — Komik Online Bahasa Indonesia',
-    description:
-      'Baca manga, manhwa, dan manhua bahasa Indonesia. Update tiap hari, gratis.',
+    title: siteTitle,
+    description: siteDescriptionLong,
     images: ['/kuroneko-logo.png'],
   },
   robots: {
