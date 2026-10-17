@@ -1,7 +1,8 @@
 import { Suspense } from 'react';
 import { ComicGrid } from '@/components/comic-grid';
 import { Pagination } from '@/components/pagination';
-import { getByType } from '@/lib/komiku';
+import { getSourceFromCookie } from '@/lib/source-cookie';
+import { getSource } from '@/lib/sources';
 import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
 
@@ -60,7 +61,9 @@ async function TypeContent({ params, searchParams }: PageProps) {
 
   let data;
   try {
-    data = await getByType(clean, { page });
+    const sourceId = await getSourceFromCookie();
+    const source = getSource(sourceId);
+    data = await source.getByType(clean, { page });
   } catch {
     notFound();
   }

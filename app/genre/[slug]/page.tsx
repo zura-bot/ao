@@ -1,7 +1,8 @@
 import { Suspense } from 'react';
 import { ComicGrid } from '@/components/comic-grid';
 import { Pagination } from '@/components/pagination';
-import { getByGenre } from '@/lib/komiku';
+import { getSourceFromCookie } from '@/lib/source-cookie';
+import { getSource } from '@/lib/sources';
 import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
 
@@ -11,38 +12,33 @@ interface PageProps {
 }
 
 const GENRE_LABELS: Record<string, string> = {
-  aksi: 'Aksi',
-  komedi: 'Komedi',
-  romantis: 'Romantis',
-  drama: 'Drama',
-  shounen: 'Shounen',
-  petualangan: 'Petualangan',
+  aksi: 'Aksi', action: 'Action',
+  komedi: 'Komedi', comedy: 'Comedy',
+  romantis: 'Romantis', romance: 'Romance',
+  drama: 'Drama', shounen: 'Shounen',
+  petualangan: 'Petualangan', adventure: 'Adventure',
   'school-life': 'School Life',
   'slice-of-life': 'Slice of Life',
-  seinen: 'Seinen',
-  supernatural: 'Supernatural',
-  'bela-diri': 'Bela Diri',
-  ecchi: 'Ecchi',
-  harem: 'Harem',
-  shoujo: 'Shoujo',
-  misteri: 'Misteri',
-  sejarah: 'Sejarah',
-  ngewe: 'Ngewe',
-  sihir: 'Sihir',
-  'fiksi-ilmiah': 'Fiksi Ilmiah',
-  psikologis: 'Psikologis',
-  horor: 'Horor',
-  reinkarnasi: 'Reinkarnasi',
-  dewasa: 'Dewasa',
-  tragedi: 'Tragedi',
+  seinen: 'Seinen', supernatural: 'Supernatural',
+  'bela-diri': 'Bela Diri', 'martial-arts': 'Martial Arts',
+  ecchi: 'Ecchi', harem: 'Harem', shoujo: 'Shoujo', josei: 'Josei',
+  misteri: 'Misteri', mystery: 'Mystery',
+  sejarah: 'Sejarah', historical: 'Historical',
+  ngewe: 'Ngewe', sihir: 'Sihir', magic: 'Magic',
+  'fiksi-ilmiah': 'Fiksi Ilmiah', 'sci-fi': 'Sci-Fi',
+  psikologis: 'Psikologis', psychological: 'Psychological',
+  horor: 'Horor', horror: 'Horror',
+  reinkarnasi: 'Reinkarnasi', reincarnation: 'Reincarnation',
+  dewasa: 'Dewasa', mature: 'Mature',
+  tragedi: 'Tragedi', tragedy: 'Tragedy',
+  fantasy: 'Fantasy', thriller: 'Thriller',
+  mecha: 'Mecha', sports: 'Sports',
 };
 
 function label(slug: string): string {
   return (
     GENRE_LABELS[slug.toLowerCase()] ||
-    slug
-      .replace(/-/g, ' ')
-      .replace(/\b\w/g, (c) => c.toUpperCase())
+    slug.replace(/-/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())
   );
 }
 
@@ -71,7 +67,9 @@ async function GenreContent({ params, searchParams }: PageProps) {
 
   let data;
   try {
-    data = await getByGenre(slug, { page });
+    const sourceId = await getSourceFromCookie();
+    const source = getSource(sourceId);
+    data = await source.getByGenre(slug, { page });
   } catch {
     notFound();
   }
@@ -107,12 +105,7 @@ async function GenreContent({ params, searchParams }: PageProps) {
       ) : (
         <>
           <ComicGrid comics={items} priorityCount={4} keyPrefix={`genre-${slug}-`} />
-
-          <Pagination
-            currentPage={page}
-            hasNext={hasNext}
-            hasPrev={hasPrev}
-          />
+          <Pagination currentPage={page} hasNext={hasNext} hasPrev={hasPrev} />
         </>
       )}
     </>

@@ -31,7 +31,7 @@ export const GENRES = [
 ];
 
 // ============================================================
-// CUSTOM AGENT — Force IPv4
+// CUSTOM AGENT — Force IPv4 + custom DNS lookup
 // ============================================================
 const agent = new Agent({
   connect: {
@@ -44,6 +44,9 @@ const agent = new Agent({
   keepAliveMaxTimeout: 60000,
 });
 
+// ============================================================
+// FETCH HELPER
+// ============================================================
 async function fetchHtml(
   url: string,
   options: { retries?: number; timeoutMs?: number } = {}
@@ -171,7 +174,7 @@ function parseCard($: cheerio.CheerioAPI, el: any): ComicCard {
 }
 
 // ============================================================
-// FUNGSI SCRAPER (internal)
+// FUNGSI SCRAPER
 // ============================================================
 async function getHome(): Promise<HomeResult> {
   const html = await fetchHtml(BASE_URL);
@@ -379,9 +382,7 @@ async function getDetail(slugOrUrl: string): Promise<ComicDetail> {
 
     const timeEl = $(a).find('time.kmk-ch-t, time');
     const dateText =
-      timeEl.text().trim() ||
-      timeEl.attr('datetime') ||
-      '';
+      timeEl.text().trim() || timeEl.attr('datetime') || '';
 
     chapters.push({
       title: titleText,
@@ -432,9 +433,7 @@ async function getChapter(slugOrUrl: string): Promise<ChapterResult> {
         throw err;
       }
     } catch {
-      throw new Error(
-        `Chapter "${slugOrUrl}" tidak ditemukan.`
-      );
+      throw new Error(`Chapter "${slugOrUrl}" tidak ditemukan.`);
     }
   }
 
@@ -470,7 +469,6 @@ async function getChapter(slugOrUrl: string): Promise<ChapterResult> {
     else if (isMangaLink && !mangaUrl) mangaUrl = href.replace(/#chapter$/, '');
   });
 
-  // Fallback: derive next/prev dari detail
   if (!nextChapterUrl || !prevChapterUrl) {
     const mangaSlugMatch = slug.match(/^(.+?)-chapter-\d+$/);
     const mangaSlug = mangaUrl
@@ -548,9 +546,12 @@ function getGenres(): string[] {
 }
 
 // ============================================================
-// EXPORT SOURCE
+// EXPORT SOURCE (paling bawah!)
 // ============================================================
-export const komikuSource: Source & { getGenres: () => string[]; GENRES: string[] } = {
+export const komikuSource: Source & {
+  getGenres: () => string[];
+  GENRES: string[];
+} = {
   id: 'komiku',
   name: 'Komiku',
   baseUrl: BASE_URL,

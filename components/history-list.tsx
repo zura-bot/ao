@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
+import type { SourceId } from '@/lib/sources/types';
 import {
   getHistory,
   deleteHistory,
@@ -11,11 +12,13 @@ import {
 } from '@/lib/history';
 
 interface HistoryListProps {
+  sourceId: SourceId;
   limit?: number;
   showClearButton?: boolean;
 }
 
 export function HistoryList({
+  sourceId,
   limit,
   showClearButton = false,
 }: HistoryListProps) {
@@ -23,25 +26,26 @@ export function HistoryList({
   const [mounted, setMounted] = useState(false);
 
   const load = () => {
-    const all = getHistory();
+    const all = getHistory(sourceId);
     setItems(limit ? all.slice(0, limit) : all);
   };
 
   useEffect(() => {
     setMounted(true);
     load();
-  }, [limit]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [limit, sourceId]);
 
   const handleDelete = (komikSlug: string, e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    deleteHistory(komikSlug);
+    deleteHistory(sourceId, komikSlug);
     load();
   };
 
   const handleClear = () => {
     if (!confirm('Hapus semua riwayat baca?')) return;
-    clearHistory();
+    clearHistory(sourceId);
     load();
   };
 
@@ -50,7 +54,7 @@ export function HistoryList({
   if (items.length === 0) {
     return (
       <div className="empty-state">
-        Belum ada riwayat baca. Buka chapter buat mulai.
+        Belum ada riwayat baca di server ini. Buka chapter buat mulai.
       </div>
     );
   }
@@ -75,10 +79,15 @@ export function HistoryList({
           const hasProgress =
             item.scrollPercent > 5 && item.scrollPercent < 95;
 
+          const prefixedChapter =
+            sourceId === 'komiku'
+              ? item.chapterSlug
+              : `${sourceId}:${item.chapterSlug}`;
+
           return (
             <li key={item.komikSlug}>
               <Link
-                href={`/baca/${item.chapterSlug}?resume=1`}
+                href={`/baca/${encodeURIComponent(prefixedChapter)}?resume=1`}
                 className="history-item"
               >
                 <div className="history-cover">

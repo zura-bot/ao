@@ -1,37 +1,31 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { withErrorHandler, fail, rateLimited } from '@/lib/api-response';
 import { rateLimit, getClientIp } from '@/lib/rate-limit';
-import { isValidGenre, parsePage } from '@/lib/validate';
-import { getByGenre } from '@/lib/komiku';
+import { getSource } from '@/lib/sources';
+import { parsePage } from '@/lib/validate';
+import type { SourceId } from '@/lib/sources/types';
 
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ slug: string }> }
 ) {
   const ip = getClientIp(request);
-  const limit = rateLimit({
-    key: `genre:${ip}`,
-    limit: 60,
-    windowMs: 60_000,
-  });
-
+  const limit = rateLimit({ key: `genre:${ip}`, limit: 60, windowMs: 60_000 });
   if (!limit.allowed) return rateLimited(limit.resetAt);
 
   const { slug } = await params;
-
-  if (!isValidGenre(slug)) {
-    return fail('Genre nggak dikenal', 'BAD_REQUEST', 400);
-  }
-
+  const sourceId = (request.nextUrl.searchParams.get('source') || 'komiku') as SourceId;
   const page = parsePage(request.nextUrl.searchParams.get('page'));
 
-  const result = await withErrorHandler(async () =>
-    getByGenre(slug.toLowerCase(), { page })
-  );
+  if (!slug) return fail('Genre nggak valid', 'BAD_REQUEST', 400);
+
+  const result = await withErrorHandler(async () => {
+    const source = getSource(sourceId);
+    return await source.getByGenre(slug, { page });
+  });
 
   if (result instanceof NextResponse) {
-    result.headers.set('X-RateLimit-Limit', '60');
-    result.headers.set('X-RateLimit-Remaining', String(limit.remaining));
+    result.headers.set('X-Source', sourceId);
   }
   return result;
 }

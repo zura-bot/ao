@@ -1900,3 +1900,88 @@ img {
     padding-right: 2rem;
   }
 }
+
+/* ==========================================================================
+   SOURCE PICKER
+   ========================================================================== */
+
+.source-picker {
+  position: relative;
+}
+
+.source-picker-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  background: transparent;
+}
+
+.source-picker-menu {
+  position: absolute;
+  top: calc(100% + 0.5rem);
+  right: 0;
+  z-index: 50;
+  min-width: 240px;
+  padding: 0.5rem;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  background: var(--surface);
+  box-shadow: var(--shadow-lg);
+  animation: menu-slide-down 0.15s ease;
+}
+
+.source-picker-label {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+  padding: 0.5rem 0.75rem 0.25rem;
+}
+
+.source-picker-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  width: 100%;
+  padding: 0.75rem;
+  border-radius: var(--radius-sm);
+  border: none;
+  background: transparent;
+  color: var(--fg);
+  font-family: var(--font-body);
+  font-size: 0.9375rem;
+  font-weight: 500;
+  text-align: left;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+
+.source-picker-item:hover {
+  background: var(--surface-hover);
+}
+
+.source-picker-item.is-active {
+  background: var(--surface-hover);
+}
+
+.source-picker-item-name {
+  flex: 1;
+  min-width: 0;
+}
+
+.source-picker-item-check {
+  flex-shrink: 0;
+  color: var(--accent);
+  font-weight: 600;
+}
+
+/* ==========================================================================
+   COMIC CARD — Relative time
+   ========================================================================== */
+
+.comic-card-time {
+  color: var(--muted);
+  font-size: inherit;
+}

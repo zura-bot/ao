@@ -4,13 +4,28 @@ import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
 import type { ChapterResult } from '@/types/komiku';
-import { saveHistory, updateScrollPercent } from '@/lib/history';
+import type { SourceId } from '@/lib/sources/types';
+import {
+  saveHistory,
+  updateScrollPercent,
+  getHistory,
+} from '@/lib/history';
 
 interface ReaderProps {
   chapter: ChapterResult;
+  sourceId: SourceId;
 }
 
-export function Reader({ chapter }: ReaderProps) {
+function extractKomikSlug(mangaUrl: string | null): string | null {
+  if (!mangaUrl) return null;
+  return mangaUrl
+    .replace(/^https?:\/\/[^/]+\//, '')
+    .replace(/^\/?komik\//, '')
+    .replace(/^\//, '')
+    .replace(/\/$/, '');
+}
+
+export function Reader({ chapter, sourceId }: ReaderProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [progress, setProgress] = useState(0);
@@ -21,16 +36,10 @@ export function Reader({ chapter }: ReaderProps) {
   const resumedRef = useRef(false);
 
   // ============================================================
-  // AUTO-SAVE RIWAYAT BACA (saat buka chapter)
+  // AUTO-SAVE RIWAYAT BACA
   // ============================================================
   useEffect(() => {
-    if (!chapter.manga_url) return;
-
-    const komikSlug = chapter.manga_url
-      .replace(/^https?:\/\/[^/]+\//, '')
-      .replace(/^\/?/, '')
-      .replace(/\/$/, '');
-
+    const komikSlug = extractKomikSlug(chapter.manga_url);
     if (!komikSlug) return;
     komikSlugRef.current = komikSlug;
 
@@ -38,8 +47,11 @@ export function Reader({ chapter }: ReaderProps) {
 
     (async () => {
       try {
+        // Build URL dengan prefix source
+        const prefixedSlug =
+          sourceId === 'komiku' ? komikSlug : `${sourceId}:${komikSlug}`;
         const res = await fetch(
-          `/api/detail/${encodeURIComponent(komikSlug)}`
+          `/api/detail/${encodeURIComponent(prefixedSlug)}`
         );
         const data = await res.json();
         if (cancelled) return;
@@ -49,7 +61,7 @@ export function Reader({ chapter }: ReaderProps) {
           .replace(/\s*[-–]?\s*Chapter\s*\d+.*$/i, '')
           .trim();
 
-        saveHistory({
+        saveHistory(sourceId, {
           komikSlug,
           komikTitle: detail?.title || fallbackTitle || chapter.title,
           cover: detail?.thumbnail || '',
@@ -59,7 +71,7 @@ export function Reader({ chapter }: ReaderProps) {
         });
       } catch {
         if (cancelled) return;
-        saveHistory({
+        saveHistory(sourceId, {
           komikSlug,
           komikTitle:
             chapter.title.replace(/\s*[-–]?\s*Chapter\s*\d+.*$/i, '').trim() ||
@@ -75,10 +87,10 @@ export function Reader({ chapter }: ReaderProps) {
     return () => {
       cancelled = true;
     };
-  }, [chapter.slug, chapter.manga_url, chapter.title]);
+  }, [chapter.slug, chapter.manga_url, chapter.title, sourceId]);
 
   // ============================================================
-  // AUTO-RESUME SCROLL (dari ?resume=1)
+  // AUTO-RESUME SCROLL
   // ============================================================
   useEffect(() => {
     if (resumedRef.current) return;
@@ -88,26 +100,18 @@ export function Reader({ chapter }: ReaderProps) {
     const komikSlug = komikSlugRef.current;
     resumedRef.current = true;
 
-    // Tunggu gambar ke-render dulu, baru scroll
     const timer = setTimeout(() => {
-      const raw = window.localStorage.getItem('kuroneko:history');
-      if (!raw) return;
-      try {
-        const items = JSON.parse(raw) as Array<{
-          komikSlug: string;
-          scrollPercent: number;
-        }>;
-        const item = items.find((h) => h.komikSlug === komikSlug);
-        if (!item || !item.scrollPercent || item.scrollPercent < 5) return;
+      const items = getHistory(sourceId);
+      const item = items.find((h) => h.komikSlug === komikSlug);
+      if (!item || !item.scrollPercent || item.scrollPercent < 5) return;
 
-        const docHeight = document.documentElement.scrollHeight;
-        const target = (docHeight * item.scrollPercent) / 100;
-        window.scrollTo({ top: target, behavior: 'auto' });
-      } catch {}
+      const docHeight = document.documentElement.scrollHeight;
+      const target = (docHeight * item.scrollPercent) / 100;
+      window.scrollTo({ top: target, behavior: 'auto' });
     }, 600);
 
     return () => clearTimeout(timer);
-  }, [searchParams]);
+  }, [searchParams, sourceId]);
 
   // ============================================================
   // SCROLL PROGRESS + AUTO-SAVE POSISI
@@ -124,12 +128,15 @@ export function Reader({ chapter }: ReaderProps) {
       if (scrollTop > 200) setShowBar(false);
       else setShowBar(true);
 
-      // Debounced save scroll position (1.5 detik)
       if (komikSlugRef.current) {
         if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
         saveTimeoutRef.current = setTimeout(() => {
           if (komikSlugRef.current) {
-            updateScrollPercent(komikSlugRef.current, Math.round(percent));
+            updateScrollPercent(
+              sourceId,
+              komikSlugRef.current,
+              Math.round(percent)
+            );
           }
         }, 1500);
       }
@@ -140,7 +147,7 @@ export function Reader({ chapter }: ReaderProps) {
       window.removeEventListener('scroll', onScroll);
       if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
     };
-  }, []);
+  }, [sourceId]);
 
   // ============================================================
   // KEYBOARD SHORTCUT
@@ -153,40 +160,47 @@ export function Reader({ chapter }: ReaderProps) {
       } else if (e.key === 'ArrowRight' && chapter.next_chapter_url) {
         navigateChapter(chapter.next_chapter_url);
       } else if (e.key === 'Escape' && chapter.manga_url) {
-        router.push(chapter.manga_url);
+        const slug = extractKomikSlug(chapter.manga_url);
+        if (slug) {
+          const prefixed =
+            sourceId === 'komiku' ? slug : `${sourceId}:${slug}`;
+          router.push(`/komik/${encodeURIComponent(prefixed)}`);
+        }
       }
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [chapter]);
+  }, [chapter, sourceId]);
 
   const navigateChapter = (url: string) => {
+    // URL dari source mungkin relative atau absolute
     const slug = url
       .replace(/^https?:\/\/[^/]+\//, '')
       .replace(/^\/?baca\//, '')
       .replace(/^\//, '')
       .replace(/\/$/, '');
-    router.push(`/baca/${slug}`);
+    const prefixed = sourceId === 'komiku' ? slug : `${sourceId}:${slug}`;
+    router.push(`/baca/${encodeURIComponent(prefixed)}`);
   };
 
   const getSlug = (url: string | null) => {
     if (!url) return null;
-    return url
+    const slug = url
       .replace(/^https?:\/\/[^/]+\//, '')
       .replace(/^\/?baca\//, '')
       .replace(/^\//, '')
       .replace(/\/$/, '');
+    return sourceId === 'komiku' ? slug : `${sourceId}:${slug}`;
   };
 
   const prevSlug = getSlug(chapter.prev_chapter_url);
   const nextSlug = getSlug(chapter.next_chapter_url);
-  const detailSlug = chapter.manga_url
-    ? chapter.manga_url
-        .replace(/^https?:\/\/[^/]+\//, '')
-        .replace(/^\//, '')
-        .replace(/\/$/, '')
-    : null;
+  const detailSlug = (() => {
+    const slug = extractKomikSlug(chapter.manga_url);
+    if (!slug) return null;
+    return sourceId === 'komiku' ? slug : `${sourceId}:${slug}`;
+  })();
 
   return (
     <>
@@ -200,7 +214,10 @@ export function Reader({ chapter }: ReaderProps) {
       <div className={`reader-nav ${showBar ? '' : 'reader-nav-hidden'}`}>
         <div className="reader-nav-inner">
           {detailSlug ? (
-            <Link href={`/komik/${detailSlug}`} className="reader-nav-back">
+            <Link
+              href={`/komik/${encodeURIComponent(detailSlug)}`}
+              className="reader-nav-back"
+            >
               <BackIcon />
               <span className="reader-nav-label">Detail</span>
             </Link>
@@ -213,7 +230,7 @@ export function Reader({ chapter }: ReaderProps) {
           <div className="reader-nav-actions">
             {prevSlug && (
               <Link
-                href={`/baca/${prevSlug}`}
+                href={`/baca/${encodeURIComponent(prevSlug)}`}
                 className="reader-nav-btn"
                 aria-label="Chapter sebelumnya"
                 title="Chapter sebelumnya (←)"
@@ -223,7 +240,7 @@ export function Reader({ chapter }: ReaderProps) {
             )}
             {nextSlug && (
               <Link
-                href={`/baca/${nextSlug}`}
+                href={`/baca/${encodeURIComponent(nextSlug)}`}
                 className="reader-nav-btn"
                 aria-label="Chapter selanjutnya"
                 title="Chapter selanjutnya (→)"
@@ -250,7 +267,10 @@ export function Reader({ chapter }: ReaderProps) {
       <div className="reader-bottom">
         <div className="reader-bottom-actions">
           {prevSlug ? (
-            <Link href={`/baca/${prevSlug}`} className="btn btn-secondary">
+            <Link
+              href={`/baca/${encodeURIComponent(prevSlug)}`}
+              className="btn btn-secondary"
+            >
               ← Sebelumnya
             </Link>
           ) : (
@@ -260,7 +280,10 @@ export function Reader({ chapter }: ReaderProps) {
           )}
 
           {nextSlug ? (
-            <Link href={`/baca/${nextSlug}`} className="btn btn-primary">
+            <Link
+              href={`/baca/${encodeURIComponent(nextSlug)}`}
+              className="btn btn-primary"
+            >
               Selanjutnya →
             </Link>
           ) : (
@@ -271,7 +294,10 @@ export function Reader({ chapter }: ReaderProps) {
         </div>
 
         {detailSlug && (
-          <Link href={`/komik/${detailSlug}`} className="reader-bottom-link">
+          <Link
+            href={`/komik/${encodeURIComponent(detailSlug)}`}
+            className="reader-bottom-link"
+          >
             Kembali ke daftar chapter
           </Link>
         )}

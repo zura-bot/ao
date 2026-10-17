@@ -1,7 +1,8 @@
 import { Suspense } from 'react';
 import { ComicGrid } from '@/components/comic-grid';
 import { SearchForm } from '@/components/search-form';
-import { search } from '@/lib/komiku';
+import { getSourceFromCookie } from '@/lib/source-cookie';
+import { getSource } from '@/lib/sources';
 
 interface PageProps {
   searchParams: Promise<{ q?: string; page?: string }>;
@@ -52,7 +53,9 @@ async function SearchResults({ searchParams }: PageProps) {
 
   let data;
   try {
-    data = await search(keyword, { page });
+    const sourceId = await getSourceFromCookie();
+    const source = getSource(sourceId);
+    data = await source.search(keyword, { page });
   } catch {
     return (
       <div className="empty-state">

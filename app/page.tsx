@@ -2,25 +2,40 @@ import { Suspense } from 'react';
 import Link from 'next/link';
 import { ComicGrid } from '@/components/comic-grid';
 import { HomeHistorySection } from '@/components/home-history-section';
-import { getHome } from '@/lib/komiku';
+import { getSourceFromCookie } from '@/lib/source-cookie';
+import { getSource } from '@/lib/sources';
 
-export default function HomePage() {
+export default async function HomePage() {
+  const sourceId = await getSourceFromCookie();
+
   return (
     <main className="container-page py-8 md:py-12">
-      {/* Riwayat baca (muncul kalau ada) */}
-      <HomeHistorySection />
+      <HomeHistorySection sourceId={sourceId} />
 
       <Suspense fallback={<HomeSkeleton />}>
-        <HomeContent />
+        <HomeContent sourceId={sourceId} />
       </Suspense>
     </main>
   );
 }
 
-async function HomeContent() {
-  const data = await getHome();
-  const latest = data.latest ?? [];
-  const popular = data.popular ?? [];
+async function HomeContent({ sourceId }: { sourceId: 'komiku' | 'shinigami' }) {
+  const source = getSource(sourceId);
+
+  let latest: any[] = [];
+  let popular: any[] = [];
+
+  try {
+    const data = await source.getHome();
+    latest = data.latest ?? [];
+    popular = data.popular ?? [];
+  } catch {
+    return (
+      <div className="empty-state">
+        Server lagi sibuk. Coba lagi bentar.
+      </div>
+    );
+  }
 
   return (
     <>
@@ -29,12 +44,10 @@ async function HomeContent() {
           <h2 className="section-title">Baru masuk</h2>
           <Link href="/latest" className="section-header-link">
             Lainnya
-            <span className="arrow" aria-hidden="true">
-              →
-            </span>
+            <span className="arrow" aria-hidden="true">→</span>
           </Link>
         </div>
-       <ComicGrid comics={latest} priorityCount={2} keyPrefix="latest-" />
+        <ComicGrid comics={latest} priorityCount={4} keyPrefix="latest-" />
       </section>
 
       <section className="section">
@@ -42,9 +55,7 @@ async function HomeContent() {
           <h2 className="section-title">Sering dibaca</h2>
           <Link href="/popular" className="section-header-link">
             Lainnya
-            <span className="arrow" aria-hidden="true">
-              →
-            </span>
+            <span className="arrow" aria-hidden="true">→</span>
           </Link>
         </div>
         <ComicGrid comics={popular} keyPrefix="popular-" />
@@ -59,27 +70,15 @@ function HomeSkeleton() {
       {[1, 2].map((section) => (
         <section key={section} className="section">
           <div className="section-header">
-            <div
-              className="skeleton"
-              style={{ height: '1.75rem', width: '8rem' }}
-            />
-            <div
-              className="skeleton"
-              style={{ height: '1rem', width: '5rem' }}
-            />
+            <div className="skeleton" style={{ height: '1.75rem', width: '8rem' }} />
+            <div className="skeleton" style={{ height: '1rem', width: '5rem' }} />
           </div>
           <div className="comic-grid">
             {Array.from({ length: 10 }).map((_, i) => (
               <div key={i} className="comic-card">
                 <div className="comic-card-cover skeleton" />
-                <div
-                  className="skeleton"
-                  style={{ height: '1rem', width: '80%' }}
-                />
-                <div
-                  className="skeleton"
-                  style={{ height: '0.75rem', width: '50%' }}
-                />
+                <div className="skeleton" style={{ height: '1rem', width: '80%' }} />
+                <div className="skeleton" style={{ height: '0.75rem', width: '50%' }} />
               </div>
             ))}
           </div>

@@ -2,17 +2,22 @@
 
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
+import type { SourceId } from '@/lib/sources/types';
 import { getHistory } from '@/lib/history';
 import { HistoryList } from './history-list';
 
-export function HomeHistorySection() {
+interface HomeHistorySectionProps {
+  sourceId: SourceId;
+}
+
+export function HomeHistorySection({ sourceId }: HomeHistorySectionProps) {
   const [hasHistory, setHasHistory] = useState(false);
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
     setMounted(true);
-    setHasHistory(getHistory().length > 0);
-  }, []);
+    setHasHistory(getHistory(sourceId).length > 0);
+  }, [sourceId]);
 
   if (!mounted || !hasHistory) return null;
 
@@ -25,7 +30,7 @@ export function HomeHistorySection() {
           <span className="arrow" aria-hidden="true">→</span>
         </Link>
       </div>
-      <HistoryList limit={6} />
+      <HistoryList sourceId={sourceId} limit={6} />
     </section>
   );
 }

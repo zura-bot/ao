@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { Suspense, useState, useEffect, type FormEvent } from 'react';
 import { ThemeToggle } from './theme-toggle';
+import { SourcePicker } from './source-picker';
 
 const NAV_LINKS = [
   { href: '/latest', label: 'Baru masuk' },
@@ -55,6 +56,7 @@ export function Navbar() {
           <Suspense fallback={null}>
             <MobileMenuButton />
           </Suspense>
+          <SourcePicker />
           <ThemeToggle />
         </div>
       </div>

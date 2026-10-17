@@ -1,9 +1,12 @@
 import { Suspense } from 'react';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { getDetail } from '@/lib/komiku';
+import { getSourceFromCookie } from '@/lib/source-cookie';
+import { getSource } from '@/lib/sources';
 import { ChapterAccordion } from '@/components/chapter-accordion';
+import { RelativeTime } from '@/components/relative-time';
 import type { Metadata } from 'next';
+import type { Genre } from '@/types/komiku';
 
 interface PageProps {
   params: Promise<{ slug: string }>;
@@ -13,7 +16,9 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   const { slug } = await params;
 
   try {
-    const detail = await getDetail(slug);
+    const sourceId = await getSourceFromCookie();
+    const source = getSource(sourceId);
+    const detail = await source.getDetail(slug);
     return {
       title: detail.title,
       description: detail.synopsis?.slice(0, 160) || undefined,
@@ -38,7 +43,9 @@ async function DetailContent({ params }: PageProps) {
 
   let detail;
   try {
-    detail = await getDetail(slug);
+    const sourceId = await getSourceFromCookie();
+    const source = getSource(sourceId);
+    detail = await source.getDetail(slug);
   } catch {
     notFound();
   }
@@ -46,6 +53,8 @@ async function DetailContent({ params }: PageProps) {
   const coverUrl = detail.thumbnail
     ? `/api/image-proxy?url=${encodeURIComponent(detail.thumbnail)}`
     : '';
+
+  const hasLastUpdate = typeof detail.last_updated === 'number';
 
   return (
     <>
@@ -102,7 +111,7 @@ async function DetailContent({ params }: PageProps) {
               <span className="info-value">
                 {detail.genres.length > 0 ? (
                   <span className="info-chips">
-                    {detail.genres.map((g) => (
+                    {detail.genres.map((g: Genre) => (
                       <Link
                         key={g.slug}
                         href={`/genre/${g.slug}`}
@@ -124,6 +133,15 @@ async function DetailContent({ params }: PageProps) {
                 {detail.total_chapters} chapter
               </span>
             </div>
+
+            {hasLastUpdate && (
+              <div className="info-row">
+                <span className="info-label">Terakhir Update</span>
+                <span className="info-value">
+                  <RelativeTime timestamp={detail.last_updated!} />
+                </span>
+              </div>
+            )}
           </div>
         </div>
       </div>

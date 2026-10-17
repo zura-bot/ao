@@ -1,7 +1,8 @@
 import { Suspense } from 'react';
 import { ComicGrid } from '@/components/comic-grid';
 import { Pagination } from '@/components/pagination';
-import { getPopular } from '@/lib/komiku';
+import { getSourceFromCookie } from '@/lib/source-cookie';
+import { getSource } from '@/lib/sources';
 import type { Metadata } from 'next';
 
 interface PageProps {
@@ -29,7 +30,9 @@ async function PopularContent({ searchParams }: PageProps) {
 
   let data;
   try {
-    data = await getPopular({ page });
+    const sourceId = await getSourceFromCookie();
+    const source = getSource(sourceId);
+    data = await source.getPopular({ page });
   } catch {
     return (
       <div className="empty-state">

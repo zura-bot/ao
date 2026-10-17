@@ -7,6 +7,7 @@ export interface ComicCard {
   total_chapters: string;
   meta: string;
   type?: string;
+  latest_chapter_time?: number;
 }
 
 export interface HomeResult {
@@ -69,6 +70,7 @@ export interface ComicDetail {
   latest_chapter: ChapterLink | null;
   total_chapters: number;
   chapters: ChapterLink[];
+  last_updated?: number;
 }
 
 export interface ChapterResult {

@@ -1,6 +1,11 @@
-const STORAGE_KEY = 'kuroneko:history';
+import type { SourceId } from '@/lib/sources/types';
+
 const MAX_ITEMS = 100;
 const MAX_AGE_DAYS = 90;
+
+function storageKey(sourceId: SourceId): string {
+  return `kuroneko:history:${sourceId}`;
+}
 
 export interface HistoryItem {
   komikSlug: string;
@@ -9,14 +14,17 @@ export interface HistoryItem {
   chapterSlug: string;
   chapterTitle: string;
   totalChapters: number;
-  scrollPercent: number; // 0-100
+  scrollPercent: number;
   timestamp: number;
 }
 
-export function getHistory(): HistoryItem[] {
+// ============================================================
+// READ
+// ============================================================
+export function getHistory(sourceId: SourceId): HistoryItem[] {
   if (typeof window === 'undefined') return [];
   try {
-    const raw = window.localStorage.getItem(STORAGE_KEY);
+    const raw = window.localStorage.getItem(storageKey(sourceId));
     if (!raw) return [];
     const parsed = JSON.parse(raw);
     if (!Array.isArray(parsed)) return [];
@@ -32,34 +40,35 @@ export function getHistory(): HistoryItem[] {
         now - item.timestamp < maxAgeMs
     );
 
-    return valid.map((item) => ({
-      ...item,
-      scrollPercent: typeof item.scrollPercent === 'number' ? item.scrollPercent : 0,
-    })).sort((a, b) => b.timestamp - a.timestamp);
+    return valid
+      .map((item) => ({
+        ...item,
+        scrollPercent:
+          typeof item.scrollPercent === 'number' ? item.scrollPercent : 0,
+      }))
+      .sort((a, b) => b.timestamp - a.timestamp);
   } catch {
     return [];
   }
 }
 
-export function getHistoryForKomik(komikSlug: string): HistoryItem | null {
-  return getHistory().find((h) => h.komikSlug === komikSlug) ?? null;
+export function getHistoryCount(sourceId: SourceId): number {
+  return getHistory(sourceId).length;
 }
 
-export function getHistoryCount(): number {
-  return getHistory().length;
-}
-
+// ============================================================
+// WRITE
+// ============================================================
 export function saveHistory(
+  sourceId: SourceId,
   item: Omit<HistoryItem, 'timestamp' | 'scrollPercent'> & {
     scrollPercent?: number;
   }
 ): void {
   if (typeof window === 'undefined') return;
   try {
-    const existing = getHistory();
+    const existing = getHistory(sourceId);
     const filtered = existing.filter((h) => h.komikSlug !== item.komikSlug);
-
-    // Kalau item baru nggak punya scrollPercent, ambil dari yang lama (kalau ada)
     const oldItem = existing.find((h) => h.komikSlug === item.komikSlug);
     const scrollPercent =
       typeof item.scrollPercent === 'number'
@@ -71,42 +80,52 @@ export function saveHistory(
       ...filtered,
     ].slice(0, MAX_ITEMS);
 
-    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
+    window.localStorage.setItem(storageKey(sourceId), JSON.stringify(updated));
   } catch {}
 }
 
 export function updateScrollPercent(
+  sourceId: SourceId,
   komikSlug: string,
   scrollPercent: number
 ): void {
   if (typeof window === 'undefined') return;
   try {
-    const existing = getHistory();
+    const existing = getHistory(sourceId);
     const updated = existing.map((item) =>
       item.komikSlug === komikSlug
         ? { ...item, scrollPercent, timestamp: Date.now() }
         : item
     );
-    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
+    window.localStorage.setItem(storageKey(sourceId), JSON.stringify(updated));
   } catch {}
 }
 
-export function deleteHistory(komikSlug: string): void {
+// ============================================================
+// DELETE
+// ============================================================
+export function deleteHistory(
+  sourceId: SourceId,
+  komikSlug: string
+): void {
   if (typeof window === 'undefined') return;
   try {
-    const existing = getHistory();
+    const existing = getHistory(sourceId);
     const filtered = existing.filter((h) => h.komikSlug !== komikSlug);
-    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(filtered));
+    window.localStorage.setItem(storageKey(sourceId), JSON.stringify(filtered));
   } catch {}
 }
 
-export function clearHistory(): void {
+export function clearHistory(sourceId: SourceId): void {
   if (typeof window === 'undefined') return;
   try {
-    window.localStorage.removeItem(STORAGE_KEY);
+    window.localStorage.removeItem(storageKey(sourceId));
   } catch {}
 }
 
+// ============================================================
+// FORMAT
+// ============================================================
 export function formatRelativeTime(timestamp: number): string {
   const now = Date.now();
   const diff = now - timestamp;

@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import type { ComicCard as ComicCardType } from '@/types/komiku';
+import { RelativeTime } from './relative-time';
 
 interface ComicCardProps {
   comic: ComicCardType;
@@ -7,6 +8,9 @@ interface ComicCardProps {
 }
 
 export function ComicCard({ comic, priority = false }: ComicCardProps) {
+  const badge = comic.genre || comic.type;
+  const hasTime = typeof comic.latest_chapter_time === 'number';
+
   return (
     <Link href={`/komik/${comic.slug}`} className="comic-card">
       <div className="comic-card-cover">
@@ -16,12 +20,29 @@ export function ComicCard({ comic, priority = false }: ComicCardProps) {
           loading={priority ? 'eager' : 'lazy'}
           decoding="async"
         />
+        {badge && <span className="comic-card-badge">{badge}</span>}
       </div>
       <h3 className="comic-card-title">{comic.title}</h3>
-      {comic.genre && (
+      {comic.total_chapters && (
         <p className="comic-card-meta">
-          {comic.genre}
-          {comic.total_chapters && ` · ${comic.total_chapters}`}
+          {comic.total_chapters}
+          {hasTime && (
+            <>
+              {' · '}
+              <RelativeTime
+                timestamp={comic.latest_chapter_time!}
+                className="comic-card-time"
+              />
+            </>
+          )}
+        </p>
+      )}
+      {!comic.total_chapters && hasTime && (
+        <p className="comic-card-meta">
+          <RelativeTime
+            timestamp={comic.latest_chapter_time!}
+            className="comic-card-time"
+          />
         </p>
       )}
     </Link>

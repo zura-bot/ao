@@ -1,4 +1,5 @@
 import { HistoryList } from '@/components/history-list';
+import { getSourceFromCookie } from '@/lib/source-cookie';
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
@@ -6,7 +7,9 @@ export const metadata: Metadata = {
   description: 'Komik yang pernah kamu baca.',
 };
 
-export default function RiwayatPage() {
+export default async function RiwayatPage() {
+  const sourceId = await getSourceFromCookie();
+
   return (
     <main className="container-page py-8 md:py-12">
       <header className="mb-10">
@@ -21,11 +24,11 @@ export default function RiwayatPage() {
           className="text-[var(--muted)] mt-2"
           style={{ fontSize: 'var(--text-base)' }}
         >
-          Komik yang pernah kamu buka, tersimpan di browser ini.
+          Komik yang pernah kamu buka di server ini, tersimpan di browser.
         </p>
       </header>
 
-      <HistoryList showClearButton />
+      <HistoryList sourceId={sourceId} showClearButton />
     </main>
   );
 }
