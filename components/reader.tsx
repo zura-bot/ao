@@ -59,17 +59,13 @@ export function Reader({ chapter, sourceId }: ReaderProps) {
   const currentChapterNumber = currentChapterIndex >= 0 ? currentChapterIndex + 1 : 1;
 
   // ============================================================
-  // FIX UTAMA: SCROLL TO TOP SAAT GANTI CHAPTER (KECUALI RESUME)
+  // SCROLL TO TOP SAAT GANTI CHAPTER (KECUALI RESUME)
   // ============================================================
   useEffect(() => {
-    // Kalau lagi resume dari riwayat, biarin logika resume yang jalan
     if (searchParams.get('resume') === '1') return;
-
-    // Kasih delay dikit biar DOM selesai render
     const timer = setTimeout(() => {
       window.scrollTo({ top: 0, behavior: 'instant' });
     }, 10);
-
     return () => clearTimeout(timer);
   }, [chapter.slug, searchParams]);
 
@@ -377,15 +373,18 @@ export function Reader({ chapter, sourceId }: ReaderProps) {
               </div>
             )}
 
-            {ch.images.map((src, i) => (
-              <img
-                key={`${ch.slug}-${i}`}
-                src={`/api/image-proxy?url=${encodeURIComponent(src)}`}
-                alt={`${ch.title} halaman ${i + 1}`}
-                loading={idx === 0 && i < 2 ? 'eager' : 'lazy'}
-                decoding="async"
-              />
-            ))}
+            {ch.images.map((src, i) => {
+              if (!src.startsWith('http')) return null;
+              return (
+                <img
+                  key={`${ch.slug}-${i}`}
+                  src={`/api/image-proxy?url=${encodeURIComponent(src)}`}
+                  alt={`${ch.title} halaman ${i + 1}`}
+                  loading={idx === 0 && i < 2 ? 'eager' : 'lazy'}
+                  decoding="async"
+                />
+              );
+            })}
           </section>
         ))}
 

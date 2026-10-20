@@ -1,10 +1,12 @@
 import { komikuSource } from './komiku';
 import { shinigamiSource } from './shinigami';
+import { manhwadesuSource } from './manhwadesu';
 import type { Source, SourceId } from './types';
 
 export const SOURCES: Record<SourceId, Source> = {
   komiku: komikuSource,
   shinigami: shinigamiSource,
+  manhwadesu: manhwadesuSource,
 };
 
 export const DEFAULT_SOURCE: SourceId = 'komiku';

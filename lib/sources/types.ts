@@ -8,7 +8,7 @@ import type {
   ChapterResult,
 } from '@/types/komiku';
 
-export type SourceId = 'komiku' | 'shinigami';
+export type SourceId = 'komiku' | 'shinigami' | 'manhwadesu';
 
 export interface Source {
   id: SourceId;

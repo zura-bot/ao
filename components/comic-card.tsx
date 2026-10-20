@@ -10,16 +10,21 @@ interface ComicCardProps {
 export function ComicCard({ comic, priority = false }: ComicCardProps) {
   const badge = comic.genre || comic.type;
   const hasTime = typeof comic.latest_chapter_time === 'number';
+  const hasCover = comic.thumbnail && comic.thumbnail.startsWith('http');
 
   return (
     <Link href={`/komik/${comic.slug}`} className="comic-card">
       <div className="comic-card-cover">
-        <img
-          src={`/api/image-proxy?url=${encodeURIComponent(comic.thumbnail)}`}
-          alt={comic.title}
-          loading={priority ? 'eager' : 'lazy'}
-          decoding="async"
-        />
+        {hasCover ? (
+          <img
+            src={`/api/image-proxy?url=${encodeURIComponent(comic.thumbnail)}`}
+            alt={comic.title}
+            loading={priority ? 'eager' : 'lazy'}
+            decoding="async"
+          />
+        ) : (
+          <div className="skeleton" style={{ width: '100%', height: '100%' }} aria-hidden="true" />
+        )}
         {badge && <span className="comic-card-badge">{badge}</span>}
       </div>
       <h3 className="comic-card-title">{comic.title}</h3>
@@ -29,20 +34,14 @@ export function ComicCard({ comic, priority = false }: ComicCardProps) {
           {hasTime && (
             <>
               {' · '}
-              <RelativeTime
-                timestamp={comic.latest_chapter_time!}
-                className="comic-card-time"
-              />
+              <RelativeTime timestamp={comic.latest_chapter_time!} className="comic-card-time" />
             </>
           )}
         </p>
       )}
       {!comic.total_chapters && hasTime && (
         <p className="comic-card-meta">
-          <RelativeTime
-            timestamp={comic.latest_chapter_time!}
-            className="comic-card-time"
-          />
+          <RelativeTime timestamp={comic.latest_chapter_time!} className="comic-card-time" />
         </p>
       )}
     </Link>
