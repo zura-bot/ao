@@ -56,26 +56,63 @@ async function getDetail(slug: string): Promise<ComicDetail> {
   };
 }
 
+// Cache daftar chapter per komik (5 menit) supaya tiap buka chapter
+// nggak harus scrape halaman detail lagi.
+const chapterListCache = new Map<string, { at: number; slugs: string[] }>();
+const CHAPTER_LIST_TTL = 5 * 60 * 1000;
+
+function chapterNumber(slug: string): number {
+  const m = slug.match(/chapter-(\d+)(?:-(\d+))?/i);
+  if (!m) return NaN;
+  return m[2] ? parseFloat(`${m[1]}.${m[2]}`) : parseInt(m[1], 10);
+}
+
+async function getOrderedChapterSlugs(mangaSlug: string): Promise<string[]> {
+  const cached = chapterListCache.get(mangaSlug);
+  if (cached && Date.now() - cached.at < CHAPTER_LIST_TTL) return cached.slugs;
+
+  const detail = await manhwadesu.getDetail(mangaSlug);
+  const slugs = detail.chapters
+    .map((c: any) => String(c.slug))
+    .filter((s: string) => !Number.isNaN(chapterNumber(s)))
+    .sort((a: string, b: string) => chapterNumber(a) - chapterNumber(b)); // lama -> baru
+
+  chapterListCache.set(mangaSlug, { at: Date.now(), slugs });
+  return slugs;
+}
+
 async function getChapter(slug: string): Promise<ChapterResult> {
   const data = await manhwadesu.getChapter(slug);
-  
-  // TRIK: Bikin URL prev/next manual dari slug
+
   let prev_chapter_url: string | null = null;
   let next_chapter_url: string | null = null;
   let manga_url: string | null = null;
 
-  const match = slug.match(/(.+)-chapter-(\d+)/i);
+  const match = slug.match(/^(.+)-chapter-\d+(?:-\d+)?$/i);
   if (match) {
     const base = match[1];
-    const num = parseInt(match[2], 10);
-    
-    prev_chapter_url = num > 1 ? `/baca/${base}-chapter-${num - 1}` : null;
-    next_chapter_url = `/baca/${base}-chapter-${num + 1}`; // Anggap aja selalu ada next
     manga_url = `/komik/${base}`;
+
+    try {
+      // Prev/next diambil dari daftar chapter ASLI, bukan nomor+1 (tebakan).
+      const slugs = await getOrderedChapterSlugs(base);
+      const idx = slugs.indexOf(slug);
+      if (idx >= 0) {
+        if (idx > 0) prev_chapter_url = `/baca/${slugs[idx - 1]}`;
+        if (idx < slugs.length - 1) next_chapter_url = `/baca/${slugs[idx + 1]}`;
+      } else {
+        throw new Error('chapter nggak ada di daftar');
+      }
+    } catch {
+      // Fallback tebakan lama, kalau halaman detail gagal di-scrape.
+      const num = parseInt(slug.match(/chapter-(\d+)/i)?.[1] || '0', 10);
+      prev_chapter_url = num > 1 ? `/baca/${base}-chapter-${num - 1}` : null;
+      next_chapter_url = `/baca/${base}-chapter-${num + 1}`;
+    }
   }
 
   return {
-    title: data.title, slug: slug, url: data.url, 
+    title: data.title, slug: slug, url: data.url,
     manga_url, prev_chapter_url, next_chapter_url,
     total_images: data.total_images, images: data.images,
   };
