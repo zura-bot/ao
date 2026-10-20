@@ -252,9 +252,25 @@ export function Reader({ chapter, sourceId }: ReaderProps) {
       const nextChapter: ChapterResult = data.data;
 
       const isDuplicate = chapters.some((c) => c.slug === nextChapter.slug);
-      if (isDuplicate || !nextChapter.images?.length) {
-        // Source ngasih chapter yang sama / kosong -> stop, jangan render dobel
+      if (isDuplicate) {
         setHasMore(false);
+        return;
+      }
+
+      if (!nextChapter.images?.length) {
+        // Chapter kosong: lewati, lanjut ke chapter sesudahnya (kalau ada)
+        // daripada langsung berhenti dan bilang "udah habis".
+        if (nextChapter.next_chapter_url) {
+          setChapters((prev) =>
+            prev.map((c, i) =>
+              i === prev.length - 1
+                ? { ...c, nextChapterUrl: nextChapter.next_chapter_url }
+                : c
+            )
+          );
+        } else {
+          setHasMore(false);
+        }
         return;
       }
 
