@@ -500,8 +500,19 @@ async function getChapter(slugOrUrl: string): Promise<ChapterResult> {
 
   const images: string[] = [];
   $('img').each((_, el) => {
-    const src = $(el).attr('src') || $(el).attr('data-src');
+    // Lazy-load: src sering cuma placeholder "data:image/..." sementara URL asli
+    // ada di data-src / data-lazy-src. Ambil kandidat pertama yang valid.
+    const candidates = [
+      $(el).attr('data-src'),
+      $(el).attr('data-lazy-src'),
+      $(el).attr('data-original'),
+      $(el).attr('src'),
+    ];
+    let src = candidates
+      .map((c) => (c || '').trim())
+      .find((c) => c && !c.startsWith('data:'));
     if (!src) return;
+    if (src.startsWith('//')) src = `https:${src}`;
     if (
       src.includes('logo') ||
       src.includes('favicon') ||
@@ -512,7 +523,7 @@ async function getChapter(slugOrUrl: string): Promise<ChapterResult> {
     ) {
       return;
     }
-    if (src.startsWith('http')) images.push(src.trim());
+    if (src.startsWith('http') && !images.includes(src)) images.push(src);
   });
 
   return {
