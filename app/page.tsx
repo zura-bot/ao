@@ -4,6 +4,7 @@ import { ComicGrid } from '@/components/comic-grid';
 import { HomeHistorySection } from '@/components/home-history-section';
 import { getSourceFromCookie } from '@/lib/source-cookie';
 import { getSource } from '@/lib/sources';
+import { ErrorRetry } from '@/components/error-retry';
 
 export default async function HomePage() {
   const sourceId = await getSourceFromCookie();
@@ -29,12 +30,8 @@ async function HomeContent({ sourceId }: { sourceId: 'komiku' | 'shinigami' }) {
     const data = await source.getHome();
     latest = data.latest ?? [];
     popular = data.popular ?? [];
-  } catch {
-    return (
-      <div className="empty-state">
-        Server lagi sibuk. Coba lagi bentar.
-      </div>
-    );
+    } catch {
+    return <ErrorRetry />;
   }
 
   return (

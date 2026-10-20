@@ -1985,3 +1985,112 @@ img {
   color: var(--muted);
   font-size: inherit;
 }
+
+/* ==========================================================================
+   WELCOME MODAL
+   ========================================================================== */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  animation: fade-in 0.3s ease;
+}
+
+.modal-content {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 2rem;
+  max-width: 420px;
+  width: 100%;
+  position: relative;
+  box-shadow: var(--shadow-lg);
+  animation: slide-up 0.3s ease;
+}
+
+.modal-close {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  background: transparent;
+  border: none;
+  font-size: 1.25rem;
+  color: var(--muted);
+  cursor: pointer;
+  padding: 0.25rem;
+}
+
+.modal-close:hover {
+  color: var(--fg);
+}
+
+.modal-title {
+  font-family: var(--font-display);
+  font-size: 1.5rem;
+  margin: 0 0 1rem 0;
+  color: var(--fg);
+}
+
+.modal-desc {
+  color: var(--muted-strong);
+  margin: 0 0 1.5rem 0;
+  font-size: var(--text-sm);
+  line-height: 1.5;
+}
+
+.modal-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slide-up {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+/* ==========================================================================
+   WELCOME MODAL — ICON BUTTONS
+   ========================================================================== */
+.modal-actions {
+  display: flex;
+  flex-direction: row; /* INI KUNCINYA BIAR SEJAJAR KE SAMPING */
+  justify-content: center; /* Biar ke tengah */
+  gap: 1rem; /* Jarak antar icon */
+  margin-top: 1.5rem;
+}
+
+.modal-icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 3.5rem;
+  height: 3.5rem;
+  border-radius: 50%;
+  border: 1px solid var(--border);
+  background: var(--surface-hover);
+  color: var(--fg);
+  transition: all 0.2s ease;
+}
+
+.modal-icon-btn:hover {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--accent-fg);
+  transform: translateY(-2px);
+}
+
+/* Biar icon di dalemnya pas ke tengah */
+.modal-icon-btn svg {
+  display: block;
+}

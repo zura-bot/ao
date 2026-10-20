@@ -6,6 +6,7 @@ import { ThemeProvider } from '@/components/theme-provider';
 import { Navbar } from '@/components/navbar';
 import { Footer } from '@/components/footer';
 import { ScrollToTop } from '@/components/scroll-to-top';
+import { WelcomeModal } from '@/components/welcome-modal';
 import './globals.css';
 
 const fraunces = Fraunces({
@@ -121,6 +122,7 @@ export default function RootLayout({
           <div className="site-content">{children}</div>
           <Footer />
           <ScrollToTop />
+          <WelcomeModal /> 
         </ThemeProvider>
         
         {/* GOOGLE ANALYTICS DI SINI */}
