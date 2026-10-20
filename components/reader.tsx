@@ -251,6 +251,13 @@ export function Reader({ chapter, sourceId }: ReaderProps) {
 
       const nextChapter: ChapterResult = data.data;
 
+      const isDuplicate = chapters.some((c) => c.slug === nextChapter.slug);
+      if (isDuplicate || !nextChapter.images?.length) {
+        // Source ngasih chapter yang sama / kosong -> stop, jangan render dobel
+        setHasMore(false);
+        return;
+      }
+
       setChapters((prev) => [
         ...prev,
         {
@@ -376,12 +383,11 @@ export function Reader({ chapter, sourceId }: ReaderProps) {
             {ch.images.map((src, i) => {
               if (!src.startsWith('http')) return null;
               return (
-                <img
+                <ChapterImage
                   key={`${ch.slug}-${i}`}
-                  src={`/api/image-proxy?url=${encodeURIComponent(src)}`}
+                  src={src}
                   alt={`${ch.title} halaman ${i + 1}`}
-                  loading={idx === 0 && i < 2 ? 'eager' : 'lazy'}
-                  decoding="async"
+                  eager={idx === 0 && i < 2}
                 />
               );
             })}
@@ -432,6 +438,41 @@ export function Reader({ chapter, sourceId }: ReaderProps) {
         )}
       </div>
     </>
+  );
+}
+
+// Gambar dengan retry 1x. Kalau tetap gagal (mis. URL tebakan yang nggak ada),
+// disembunyikan supaya nggak muncul kotak abu-abu kosong.
+function ChapterImage({
+  src,
+  alt,
+  eager,
+}: {
+  src: string;
+  alt: string;
+  eager: boolean;
+}) {
+  const [attempt, setAttempt] = useState(0);
+  const [failed, setFailed] = useState(false);
+
+  if (failed) return null;
+
+  const proxied = `/api/image-proxy?url=${encodeURIComponent(src)}${
+    attempt > 0 ? `&r=${attempt}` : ''
+  }`;
+
+  return (
+    // eslint-disable-next-line @next/next/no-img-element
+    <img
+      src={proxied}
+      alt={alt}
+      loading={eager ? 'eager' : 'lazy'}
+      decoding="async"
+      onError={() => {
+        if (attempt < 1) setAttempt((a) => a + 1);
+        else setFailed(true);
+      }}
+    />
   );
 }
 
