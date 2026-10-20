@@ -63,7 +63,7 @@ function getRefererFor(hostname: string): string {
   if (clean.includes('manhwadesu') || clean.includes('gilakomik') || clean.includes('wp.com') || clean.includes('googleusercontent')) {
     return 'https://manhwadesu.wiki/';
   }
-  if (clean.endsWith('.anipop.xyz') || clean.endsWith('.gogoanime.fit') || clean.endsWith('.googiane.com') || clean.endsWith('.komiku.online') || clean.endsWith('.komiku.org')) {
+  if (clean === 'komiku.online' || clean === 'komiku.org' || clean.endsWith('.anipop.xyz') || clean.endsWith('.gogoanime.fit') || clean.endsWith('.googiane.com') || clean.endsWith('.komiku.online') || clean.endsWith('.komiku.org')) {
     return 'https://komiku.online/';
   }
   return '';
@@ -89,6 +89,7 @@ function validateUrl(raw: string): ValidationResult {
 
   if (parsed.protocol !== 'https:') return { ok: false, error: `Protocol "${parsed.protocol}" nggak diizinkan`, code: 'FORBIDDEN_PROTOCOL' };
   if (isPrivateHostname(parsed.hostname)) return { ok: false, error: 'Host privat nggak diizinkan', code: 'FORBIDDEN_HOST' };
+  if (!isAllowedHost(parsed.hostname)) console.warn(`[IMAGE-PROXY] Host ditolak (belum di allowlist): ${parsed.hostname}`);
   if (!isAllowedHost(parsed.hostname)) return { ok: false, error: `Host "${parsed.hostname}" nggak diizinkan`, code: 'FORBIDDEN_HOST' };
   return { ok: true, parsed };
 }
